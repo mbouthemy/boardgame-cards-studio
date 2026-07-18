@@ -1,4 +1,4 @@
-export const anonymousUserStorageKey = "card-garden-user-id";
+export const anonymousUserStorageKey = "boardgame-card-studio-user-id";
 
 export function getOrCreateAnonymousUserId() {
   const existingUserId = window.localStorage.getItem(anonymousUserStorageKey);

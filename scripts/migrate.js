@@ -20,7 +20,7 @@ async function migrate() {
         applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
-    await client.query("SELECT pg_advisory_lock(hashtext('card_garden_migrations'))");
+    await client.query("SELECT pg_advisory_lock(hashtext('boardgame_card_studio_migrations'))");
 
     const files = (await fs.readdir(migrationsDirectory))
       .filter((file) => /^\d+_.+\.sql$/.test(file))
@@ -37,7 +37,7 @@ async function migrate() {
       console.log(`Applied migration: ${file}`);
     }
   } finally {
-    await client.query("SELECT pg_advisory_unlock(hashtext('card_garden_migrations'))").catch(() => {});
+    await client.query("SELECT pg_advisory_unlock(hashtext('boardgame_card_studio_migrations'))").catch(() => {});
     client.release();
     await pool.end();
   }

@@ -14,10 +14,11 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     const cardType = typeof body.cardType === "string" ? body.cardType.trim() : undefined;
     const description = typeof body.description === "string" ? body.description.trim() : undefined;
     const gameEffect = typeof body.gameEffect === "string" ? body.gameEffect.trim() : undefined;
+    const imageDescription = typeof body.imageDescription === "string" ? body.imageDescription.trim() : undefined;
     const artworkPath = typeof body.artworkPath === "string" ? body.artworkPath : undefined;
     await db.query(
-      "UPDATE cards SET title = COALESCE($1, title), card_type = COALESCE($2, card_type), description = COALESCE($3, description), game_effect = COALESCE($4, game_effect), artwork_path = COALESCE($5, artwork_path) WHERE id = $6",
-      [title || undefined, cardType || undefined, description, gameEffect, artworkPath, params.cardId],
+      "UPDATE cards SET title = COALESCE($1, title), card_type = COALESCE($2, card_type), description = COALESCE($3, description), game_effect = COALESCE($4, game_effect), image_description = COALESCE($5, image_description), artwork_path = COALESCE($6, artwork_path) WHERE id = $7",
+      [title || undefined, cardType || undefined, description, gameEffect, imageDescription, artworkPath, params.cardId],
     );
     const project = await getProject(userId, params.projectId);
     return NextResponse.json(project?.collections.flatMap((collection) => collection.cards).find((card) => card.id === params.cardId));

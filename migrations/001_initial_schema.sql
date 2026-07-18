@@ -1,4 +1,4 @@
--- Card Garden's initial PostgreSQL schema.
+-- Boardgame Card Studio's initial PostgreSQL schema.
 -- Applied automatically by `npm run dev` and `npm start`.
 
 BEGIN;

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Card Garden — Board Game Card Creator",
-  description: "A playful place to grow your board game cards."
+  title: "Boardgame Card Studio",
+  description: "Create, illustrate, and organize your board game cards."
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

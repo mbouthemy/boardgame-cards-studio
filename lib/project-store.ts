@@ -9,6 +9,7 @@ export type Card = {
   cardType: string;
   description: string;
   gameEffect: string;
+  imageDescription: string;
   artworkPath: string | null;
   position: number;
 };
@@ -35,10 +36,11 @@ export type Project = {
 
 type ProjectRow = Omit<Project, "collections" | "createdAt" | "updatedAt"> & { created_at: Date; updated_at: Date };
 type CollectionRow = Omit<CardCollection, "cards"> & { project_id: string; collection_id: string };
-type CardRow = Omit<Card, "collectionId" | "cardType" | "gameEffect" | "artworkPath"> & {
+type CardRow = Omit<Card, "collectionId" | "cardType" | "gameEffect" | "imageDescription" | "artworkPath"> & {
   collection_id: string;
   card_type: string;
   game_effect: string;
+  image_description: string;
   artwork_path: string | null;
 };
 
@@ -58,7 +60,7 @@ export async function getProjects(userId: string) {
   const collectionIds = collectionRows.map((collection) => collection.collection_id);
   const { rows: cardRows } = collectionIds.length
     ? await db.query<CardRow>(
-        "SELECT id, collection_id, title, card_type, description, game_effect, artwork_path, position FROM cards WHERE collection_id = ANY($1::uuid[]) ORDER BY position, created_at",
+        "SELECT id, collection_id, title, card_type, description, game_effect, image_description, artwork_path, position FROM cards WHERE collection_id = ANY($1::uuid[]) ORDER BY position, created_at",
         [collectionIds],
       )
     : { rows: [] as CardRow[] };
@@ -68,7 +70,7 @@ export async function getProjects(userId: string) {
     const cards = cardsByCollection.get(row.collection_id) ?? [];
     cards.push({
       id: row.id, collectionId: row.collection_id, title: row.title, cardType: row.card_type,
-      description: row.description, gameEffect: row.game_effect, artworkPath: row.artwork_path, position: row.position,
+      description: row.description, gameEffect: row.game_effect, imageDescription: row.image_description, artworkPath: row.artwork_path, position: row.position,
     });
     cardsByCollection.set(row.collection_id, cards);
   }

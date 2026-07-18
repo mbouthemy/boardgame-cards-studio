@@ -1,4 +1,4 @@
-# Card Garden
+# Boardgame Card Studio
 
 A bright, child-friendly web app for creating board-game card collections. It is currently a UI prototype: users can name a project, establish its theme and atmosphere, sketch a collection of cards, and reach an export-ready state.
 
@@ -23,14 +23,14 @@ Open `http://localhost:3000` in your browser.
 ## PostgreSQL setup
 
 1. Copy `.env.local.example` to `.env.local` and set `DATABASE_URL` to your PostgreSQL connection string.
-2. Create a database named `card_garden` (or use an existing database).
+2. Create a database named `boardgame_card_studio` (or use an existing database).
 3. Start the app with `npm run dev`. It automatically runs every unapplied file in `migrations/` before Next.js starts.
 
 Applied migrations are recorded in the `schema_migrations` table. The database client lives in `lib/db.ts` and is server-only. The current UI is still mock-data driven; wire this client into server actions or route handlers when persistence is added to the project flow.
 
 ## Anonymous users
 
-On first load, the browser generates a UUID and stores it under `card-garden-user-id` in `localStorage`. This is enough to associate projects with one browser while the app remains account-free. It is not secure authentication: clearing browser data or using another device creates a different identity.
+On first load, the browser generates a UUID and stores it under `boardgame-card-studio-user-id` in `localStorage`. This is enough to associate projects with one browser while the app remains account-free. It is not secure authentication: clearing browser data or using another device creates a different identity.
 
 ## S3 image storage
 
@@ -50,6 +50,12 @@ The IAM principal needs `s3:PutObject` and `s3:GetObject` for the chosen bucket.
 ```
 
 Add your deployed app origin to `AllowedOrigins` when deploying. Image reads are served through `/api/images` using a one-hour S3 download URL; keep the bucket private.
+
+After importing cards from CSV, the artwork step accepts up to 20 images at once. Name a file `01.png` or `01.jpg` to attach it to CSV item number `1`; other valid image filenames are kept as general project artwork.
+
+## OpenAI setup
+
+Add `OPENAI_API_KEY` to `.env.local` when enabling AI generation. `OPENAI_IMAGE_MODEL` defaults to `gpt-image-2`. Keep the key server-only; it must never be exposed through a `NEXT_PUBLIC_` variable or committed to Git.
 
 ## Planned technical direction
 
