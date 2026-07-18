@@ -24,8 +24,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const project = await getProject(userId, params.projectId);
     if (!project) return NextResponse.json({ error: "Project not found." }, { status: 404 });
     if (!project.collections.some((collection) => collection.cards.length)) return NextResponse.json({ error: "Import cards before starting generation." }, { status: 400 });
-    const body = await request.json(); const provider = body.provider === "gemini" ? "gemini" : "openai";
-    const model = provider === "gemini" ? process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-image" : process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
+    const body = await request.json(); const provider = body.provider === "gemini" || body.provider === "cloudflare" ? body.provider : "openai";
+    const model = provider === "gemini" ? process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-image" : provider === "cloudflare" ? process.env.CLOUDFLARE_IMAGE_MODEL || "@cf/black-forest-labs/flux-1-schnell" : process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
     const { rows } = await db.query("INSERT INTO generation_jobs (project_id, requester_id, provider, model) VALUES ($1, $2, $3, $4) RETURNING id", [params.projectId, userId, provider, model]);
     await runGenerationJob(rows[0].id);
     const { rows: jobRows } = await db.query("SELECT id, status, provider, model, error_message, created_at, started_at, completed_at FROM generation_jobs WHERE id = $1", [rows[0].id]);

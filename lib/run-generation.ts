@@ -8,12 +8,19 @@ export async function runGenerationJob(jobId: string) {
   const { rows: jobs } = await db.query("SELECT * FROM generation_jobs WHERE id = $1", [jobId]);
   const job = jobs[0];
   if (!job) throw new Error("Generation job not found.");
-  if (!process.env.S3_BUCKET || !process.env.S3_REGION || (job.provider === "openai" && !process.env.OPENAI_API_KEY) || (job.provider === "gemini" && !process.env.GEMINI_API_KEY)) throw new Error("The selected provider API key plus S3_BUCKET and S3_REGION are required.");
+  if (!process.env.S3_BUCKET || !process.env.S3_REGION || (job.provider === "openai" && !process.env.OPENAI_API_KEY) || (job.provider === "gemini" && !process.env.GEMINI_API_KEY) || (job.provider === "cloudflare" && (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID))) throw new Error("The selected provider credentials plus S3_BUCKET and S3_REGION are required.");
   await db.query("UPDATE generation_jobs SET status = 'running', started_at = NOW() WHERE id = $1", [jobId]);
   const { rows: cards } = await db.query("SELECT c.id, c.title, c.description, c.image_description, c.artwork_path, p.name project_name, p.description project_description FROM cards c JOIN card_collections cc ON cc.id = c.collection_id JOIN projects p ON p.id = cc.project_id WHERE p.id = $1 ORDER BY c.position", [job.project_id]);
   // Project-level artwork is intentionally excluded from LLM requests.
   // Only each card's text fields are used when that card has no supplied image.
-  const s3 = new S3Client({ region: process.env.S3_REGION });
+  const accessKeyId = process.env.S3_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+  const s3 = new S3Client({
+    region: process.env.S3_REGION,
+    credentials: accessKeyId && secretAccessKey
+      ? { accessKeyId, secretAccessKey }
+      : undefined,
+  });
   const allowedMissingCardIds = new Set(cards.filter((card) => !card.artwork_path).slice(0, 5).map((card) => card.id));
   let generationStopped = false;
   for (const card of cards) {
@@ -23,8 +30,8 @@ export async function runGenerationJob(jobId: string) {
     const prompt = `Create polished board-game card artwork for ${card.title}. Game: ${card.project_name}. ${card.project_description} Card description: ${card.description}. Visual direction: ${card.image_description || card.description}. No text, numbers, borders, or card frame.`;
     try {
       console.info("[generation] calling image provider", { jobId, provider: job.provider, model: job.model, cardId: card.id, title: card.title, prompt });
-      const response = job.provider === "gemini" ? await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", { method: "POST", headers: { "x-goog-api-key": process.env.GEMINI_API_KEY!, "Content-Type": "application/json" }, body: JSON.stringify({ model: job.model, input: prompt, response_format: { type: "image", aspect_ratio: "1:1", image_size: "1K" } }) }) : await fetch("https://api.openai.com/v1/images/generations", { method: "POST", headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: job.model, prompt, size: "1024x1024", quality: "medium", output_format: "png" }) });
-      const payload = await response.json(); const imageData = job.provider === "gemini" ? payload.output_image?.data : payload.data?.[0]?.b64_json; if (!response.ok || !imageData) throw new Error(payload.error?.message || "Image generation failed.");
+      const response = job.provider === "gemini" ? await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", { method: "POST", headers: { "x-goog-api-key": process.env.GEMINI_API_KEY!, "Content-Type": "application/json" }, body: JSON.stringify({ model: job.model, input: prompt, response_format: { type: "image", aspect_ratio: "1:1", image_size: "1K" } }) }) : job.provider === "cloudflare" ? await fetch(`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/${job.model}`, { method: "POST", headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`, "Content-Type": "application/json" }, body: JSON.stringify({ prompt }) }) : await fetch("https://api.openai.com/v1/images/generations", { method: "POST", headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: job.model, prompt, size: "1024x1024", quality: "medium", output_format: "png" }) });
+      const payload = await response.json(); const imageData = job.provider === "gemini" ? payload.output_image?.data : job.provider === "cloudflare" ? payload.result?.image : payload.data?.[0]?.b64_json; if (!response.ok || !imageData) throw new Error(payload.error?.message || "Image generation failed.");
       const key = `generated/${job.project_id}/${card.id}/${randomUUID()}.png`;
       await s3.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET, Key: key, Body: Buffer.from(imageData, "base64"), ContentType: "image/png" }));
       await db.query("UPDATE cards SET artwork_path = $1 WHERE id = $2", [key, card.id]); await db.query("INSERT INTO generation_results (job_id, card_id, status, storage_key, prompt) VALUES ($1, $2, 'generated', $3, $4)", [jobId, card.id, key, prompt]);
