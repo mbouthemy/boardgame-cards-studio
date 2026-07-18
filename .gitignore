@@ -1,0 +1,9 @@
+# Dependencies and Next.js build output
+node_modules/
+.next/
+dev.log
+
+# Local credentials
+.env.local
+.env*.local
+!.env.local.example
