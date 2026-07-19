@@ -2,6 +2,10 @@
 
 A bright, child-friendly web app for creating board-game card collections. It is currently a UI prototype: users can name a project, establish its theme and atmosphere, sketch a collection of cards, and reach an export-ready state.
 
+## Try it here
+
+https://boardgame-cards-studio.vercel.app/
+
 ## Current scope
 
 - Next.js + React interface
